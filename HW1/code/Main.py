@@ -103,3 +103,88 @@ print("best_criterion =", best_criterion)
 print("best_n_estimators =", best_n_estimators)
 print("best_max_depth =", best_max_depth)
 
+#now that we've got our best parameters
+#it's time to test it on test data and see
+#how it works
+rf = RandomForestClassifier(criterion = best_criterion,
+                            n_estimators = best_n_estimators,
+                            max_depth = best_max_depth,
+                            n_jobs = -1)
+rf.fit(X_train, np.array(y_train["Cover_Type"]))
+
+y_pred = rf.predict(X_train)
+confusion_mat = confusion_matrix(np.array(y_train["Cover_Type"]), y_pred)
+print(confusion_mat)
+
+#time for testing
+y_pred = rf.predict(X_test)
+confusion_mat = confusion_matrix(np.array(y_test["Cover_Type"]), y_pred)
+print(confusion_mat)
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+
+#now let's try it again for decision tree model
+#finding best parameters
+criterions = ["gini", "entropy", "log_loss"]
+splitters = ["best", "random"]
+max_depths = [None, 10, 20]
+
+best_criterion = "gini"
+best_splitter = "best"
+best_max_depth = None
+best_score = 0
+
+for current_criterion in criterions:
+    for current_splitter in splitters:
+        for current_max_depth in max_depths:
+            my_pipeline = Pipeline(steps=[('preprocessor', SimpleImputer()),
+                                          ('model', DecisionTreeClassifier(criterion = current_criterion,
+                                                                           splitter = current_splitter,
+                                                                           max_depth = current_max_depth))
+                                         ])
+            
+            scores = cross_validate(my_pipeline, X_train, np.array(y_train["Cover_Type"]),
+                                          cv=5,
+                                          scoring=['accuracy', 'precision_macro', 'recall_macro', 'f1_macro'],
+                                          return_train_score=True, return_estimator=True)
+            accurancy_scores = scores['test_accuracy']
+            precision_scores = scores['test_precision_macro']
+            recall_scores = scores['test_recall_macro']
+            f1_scores = scores['test_f1_macro']
+
+            print("criterion =", current_criterion,
+                  "splitter =", current_splitter,
+                  "max_depth =", current_max_depth)
+            print("accurancy_scores:\n", accurancy_scores)
+            print("precision_scores:\n", precision_scores)
+            print("recall_scores:\n", recall_scores)
+            print("f1_scores:\n", f1_scores)
+            
+            score = np.mean(accurancy_scores)
+            print("Average accurancy score:", score)
+            if(score > best_score):
+                best_criterion = current_criterion
+                best_splitter = current_splitter
+                best_max_depth = current_max_depth
+                best_score = score
+
+print("best_score =", best_score)
+print("best_criterion =", best_criterion)
+print("best_splitter =", best_splitter)
+print("best_max_depth =", best_max_depth)
+
+#testing best model on test data
+dt = DecisionTreeClassifier(criterion = best_criterion,
+                            splitter = best_splitter,
+                            max_depth = best_max_depth)
+dt.fit(X_train, np.array(y_train["Cover_Type"]))
+
+y_pred = dt.predict(X_train)
+confusion_mat = confusion_matrix(np.array(y_train["Cover_Type"]), y_pred)
+print(confusion_mat)
+
+y_pred = dt.predict(X_test)
+confusion_mat = confusion_matrix(np.array(y_test["Cover_Type"]), y_pred)
+print(confusion_mat)
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
